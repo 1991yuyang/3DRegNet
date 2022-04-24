@@ -38,6 +38,10 @@ class FC(nn.Module):
 class Res(nn.Module):
 
     def __init__(self, resblock_count):
+        """
+
+        :param resblock_count: number of resnet block
+        """
         super(Res, self).__init__()
         self.res_blocks = nn.Sequential()
         for i in range(resblock_count):
@@ -59,11 +63,35 @@ class Res(nn.Module):
         return res_results
 
 
+class CLSNet(nn.Module):
+
+    def __init__(self, res_block_count, num_of_correspondence):
+        """
+
+        :param res_block_count: number of resnet block
+        :param num_of_correspondence: number of point correspondence of one point correspondence set
+        """
+        super(CLSNet, self).__init__()
+        self.fc1 = FC(in_features=6, out_features=128, is_relu=True, is_bn=False, num_of_correspondence=num_of_correspondence)
+        self.res = Res(res_block_count)
+        self.fc2 = FC(in_features=128, out_features=1, is_relu=True, is_bn=False, num_of_correspondence=num_of_correspondence)
+        self.tanh = nn.Tanh()
+
+    def forward(self, x):
+        fc1_result = self.fc1(x)
+        res_results = self.res(fc1_result)
+        out = self.tanh(self.fc2(res_results[-1]))  # shape like (N, C, 1)
+        cls_features = [fc1_result] + res_results
+        return out, cls_features
+
+
+
 if __name__ == "__main__":
     d = t.randn(2, 1024, 6)
-    fc = FC(in_features=6, out_features=512, is_relu=True, is_bn=False, num_of_correspondence=1024)
-    res = Res(5)
-    out = fc(d)
-    out, results = res(out)
-    for o in results:
-        print(o.size())
+    cls_model = CLSNet(5, 1024)
+    out, cls_features = cls_model(d)
+    print(out.size())
+    print(out.max(), out.min())
+    for f in cls_features:
+        print(f.size())
+

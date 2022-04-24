@@ -80,17 +80,60 @@ class CLSNet(nn.Module):
     def forward(self, x):
         fc1_result = self.fc1(x)
         res_results = self.res(fc1_result)
-        out = self.tanh(self.fc2(res_results[-1]))  # shape like (N, C, 1)
+        out = self.tanh(self.fc2(res_results[-1])).squeeze(2)  # shape like (N, C)
         cls_features = [fc1_result] + res_results
         return out, cls_features
 
 
-if __name__ == "__main__":
-    d = t.randn(2, 1024, 6)
-    cls_model = CLSNet(5, 1024)
-    out, cls_features = cls_model(d)
-    print(out.size())
-    print(out.max(), out.min())
-    for f in cls_features:
-        print(f.size())
+class RegNet(nn.Module):
 
+    def __init__(self, M, res_block_count):
+        super(RegNet, self).__init__()
+        self.context_bn = nn.Sequential()
+        self.conv = nn.Conv2d(in_channels=1, out_channels=8, kernel_size=3, stride=(2, 1), padding=(1, 1))
+        self.linear1 = nn.Sequential(
+            nn.Linear(in_features=8 * ((res_block_count + 1) // 2) * 128, out_features=256),
+            nn.ReLU()
+        )
+        self.linear2 = nn.Linear(in_features=256, out_features=M + 3)
+
+    def forward(self, cls_features):
+        pool_results = []
+        for cls_feature in cls_features:
+            max_pool_result = t.max(cls_feature, dim=1).values  # shape like: (N, F)
+            context_bn_result = self.context_bn(max_pool_result)
+            pool_results.append(context_bn_result)
+        concate_results = t.cat(pool_results, dim=1)
+        concate_results = concate_results.view((concate_results.size()[0], len(pool_results), -1))  # shape like: (N, res_block_count + 1, F)
+        concate_results = concate_results.unsqueeze(1)  # (N, 1, res_block_count + 1, F)
+        conv_result = self.conv(concate_results).view((concate_results.size()[0], -1))  # (N, 8, (res_block_count + 1) // 2, F)
+        linear1_result = self.linear1(conv_result)
+        reg_result = self.linear2(linear1_result)
+        return reg_result
+
+
+class ThreeDRegNet(nn.Module):
+
+    def __init__(self, res_block_count, num_of_correspondence, M):
+        """
+
+        :param res_block_count: resnet block count of Registration Block
+        :param num_of_correspondence: number of correspondence of one point correspondence set
+        :param M: number of rotation parameter
+        """
+        super(ThreeDRegNet, self).__init__()
+        self.cls = CLSNet(res_block_count, num_of_correspondence)
+        self.reg = RegNet(M, res_block_count)
+
+    def forward(self, x):
+        cls_out, cls_features = self.cls(x)  # cls_out: (N, num_of_correspondence)
+        reg_out = self.reg(cls_features)  # reg_out: (N, M + 3)
+        return cls_out, reg_out
+
+
+if __name__ == "__main__":
+    d = t.randn(2, 512, 6)
+    model = ThreeDRegNet(5, 512, 5)
+    cls_out, reg_out = model(d)
+    print(cls_out.size())
+    print(reg_out.size())

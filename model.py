@@ -85,7 +85,6 @@ class CLSNet(nn.Module):
         return out, cls_features
 
 
-
 if __name__ == "__main__":
     d = t.randn(2, 1024, 6)
     cls_model = CLSNet(5, 1024)

@@ -85,11 +85,22 @@ class CLSNet(nn.Module):
         return out, cls_features
 
 
+class ContextBN(nn.Module):
+
+    def __init__(self):
+        super(ContextBN, self).__init__()
+        pass
+
+    def forward(self, x):
+        x = (x - t.mean(x, dim=1, keepdim=True)) / t.std(x, dim=1, keepdim=True)
+        return x
+
+
 class RegNet(nn.Module):
 
     def __init__(self, M, res_block_count):
         super(RegNet, self).__init__()
-        self.context_bn = nn.Sequential()
+        self.context_bn = ContextBN()
         self.conv = nn.Conv2d(in_channels=1, out_channels=8, kernel_size=3, stride=(2, 1), padding=(1, 1))
         self.linear1 = nn.Sequential(
             nn.Linear(in_features=8 * ((res_block_count + 1) // 2) * 128, out_features=256),

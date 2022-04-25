@@ -140,15 +140,57 @@ class ThreeDRegNet(nn.Module):
         self.reg = RegNet(M, res_block_count)
 
     def forward(self, x):
+        """
+
+        :param x: shape like (N, num_of_correspondence, 6), note that x[:, :, :3] is the point set which is registrated
+        :return:
+        """
         cls_out, cls_features, use_for_cls_loss = self.cls(x)  # cls_out: (N, num_of_correspondence)
         reg_out = self.reg(cls_features)  # reg_out: (N, M + 3)
         return cls_out, reg_out, use_for_cls_loss
 
 
+class RefineNet(nn.Module):
+
+    def __init__(self, threeDRegNet_count, res_block_count, num_of_correspondence, M):
+        super(RefineNet, self).__init__()
+        self.M = M
+        self.block = nn.Sequential()
+        for i in range(threeDRegNet_count):
+            self.block.add_module("regnet_%d" % (i,), ThreeDRegNet(res_block_count, num_of_correspondence, M))
+
+    def forward(self, x):
+        cls_outs = []  # shape of item is (N, num_of_correspondence)
+        reg_outs = []  # shape of item is (N, M + 3)
+        use_for_cls_losses = []  # shape of item is (N, num_of_correspondence)
+        reg_result = x[:, :, :x.size()[2] // 2]
+        dest = x[:, :, x.size()[2] // 2:]
+        for n, m in self.block._modules.items():
+            cls_out, reg_out, use_for_cls_loss = m(x)
+            reg_result = registration(reg_out,  reg_result, self.M)
+            x = t.cat([reg_result, dest], dim=2)
+            cls_outs.append(cls_out)
+            reg_outs.append(reg_out)
+            use_for_cls_losses.append(use_for_cls_loss)
+        return cls_outs, reg_outs, use_for_cls_losses
+
+
+def registration(reg_out, point_set, M):
+    """
+
+    :param M: number of parameter of rotation, like 9 means 3 * 3 rotation matrix
+    :param reg_out: reg_out, shape like (N, M + 3), N is the number of point set
+    :param point_set: point set, shape like (N, num_of_correspondence, 3), N is the number of point set, num_of_correspondence is the number of point correspondence of one point set, 3 is one point
+    :return:
+    """
+    rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, M // 3)
+    shift_map = reg_out[:, M:]  # shape like (N, 3)
+    rot_result = t.matmul(point_set, rotation_mat)  # shape like (N, num_of_correspondence, M // 3)
+    shift_result = rot_result + shift_map.unsqueeze(1)  # shape like (N, num_of_correspondence, M // 3)
+    return shift_result
+
+
 if __name__ == "__main__":
     d = t.randn(2, 512, 6)
-    model = ThreeDRegNet(5, 512, 5)
-    cls_out, reg_out, use_for_cls_loss = model(d)
-    print(use_for_cls_loss.size())
-    print(cls_out.size())
-    print(reg_out.size())
+    model = RefineNet(10, 5, 512, 9)
+    cls_outs, reg_outs, use_for_cls_losses = model(d)

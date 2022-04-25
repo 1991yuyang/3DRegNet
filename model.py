@@ -74,15 +74,18 @@ class CLSNet(nn.Module):
         super(CLSNet, self).__init__()
         self.fc1 = FC(in_features=6, out_features=128, is_relu=True, is_bn=False, num_of_correspondence=num_of_correspondence)
         self.res = Res(res_block_count)
-        self.fc2 = FC(in_features=128, out_features=1, is_relu=True, is_bn=False, num_of_correspondence=num_of_correspondence)
+        self.fc2 = FC(in_features=128, out_features=1, is_relu=False, is_bn=False, num_of_correspondence=num_of_correspondence)
+        self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
 
     def forward(self, x):
         fc1_result = self.fc1(x)
         res_results = self.res(fc1_result)
-        out = self.tanh(self.fc2(res_results[-1])).squeeze(2)  # shape like (N, C)
+        use_for_cls_loss = self.fc2(res_results[-1]).squeeze(2)  # shape like (N, C)
+        relu_result = self.relu(use_for_cls_loss)
+        out = self.tanh(relu_result)  # shape like (N, C)
         cls_features = [fc1_result] + res_results
-        return out, cls_features
+        return out, cls_features, use_for_cls_loss
 
 
 class ContextBN(nn.Module):
@@ -137,14 +140,15 @@ class ThreeDRegNet(nn.Module):
         self.reg = RegNet(M, res_block_count)
 
     def forward(self, x):
-        cls_out, cls_features = self.cls(x)  # cls_out: (N, num_of_correspondence)
+        cls_out, cls_features, use_for_cls_loss = self.cls(x)  # cls_out: (N, num_of_correspondence)
         reg_out = self.reg(cls_features)  # reg_out: (N, M + 3)
-        return cls_out, reg_out
+        return cls_out, reg_out, use_for_cls_loss
 
 
 if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = ThreeDRegNet(5, 512, 5)
-    cls_out, reg_out = model(d)
+    cls_out, reg_out, use_for_cls_loss = model(d)
+    print(use_for_cls_loss.size())
     print(cls_out.size())
     print(reg_out.size())

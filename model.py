@@ -185,7 +185,7 @@ def registration(reg_out, point_set, M):
     """
     rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, M // 3)
     shift_map = reg_out[:, M:]  # shape like (N, 3)
-    rot_result = t.matmul(point_set, rotation_mat)  # shape like (N, num_of_correspondence, M // 3)
+    rot_result = t.matmul(rotation_mat, point_set.permute(dims=[0, 2, 1])).permute(dims=[0, 2, 1])  # shape like (N, num_of_correspondence, M // 3)
     shift_result = rot_result + shift_map.unsqueeze(1)  # shape like (N, num_of_correspondence, M // 3)
     return shift_result
 
@@ -194,3 +194,4 @@ if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = RefineNet(10, 5, 512, 9)
     cls_outs, reg_outs, use_for_cls_losses = model(d)
+

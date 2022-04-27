@@ -163,19 +163,19 @@ class RefineNet(nn.Module):
         cls_outs = []  # shape of item is (N, num_of_correspondence)
         reg_outs = []  # shape of item is (N, M + 3)
         use_for_cls_losses = []  # shape of item is (N, num_of_correspondence)
-        reg_results = []   # shape of item is (N, num_of_correspondence, 3)
-        reg_result = x[:, :, :x.size()[2] // 2]  # point after registrate, shape like (N, num_of_correspondence, 3)
+        points_preds = []   # shape of item is (N, num_of_correspondence, 3)
+        points_pred = x[:, :, :x.size()[2] // 2]  # point after registrate, shape like (N, num_of_correspondence, 3)
         dest = x[:, :, x.size()[2] // 2:]  # target point of registration, shape like (N, num_of_correspondence, 3)
 
         for n, m in self.block._modules.items():
             cls_out, reg_out, use_for_cls_loss = m(x)
-            reg_result = registration(reg_out,  reg_result, self.M)
-            reg_results.append(reg_result)
-            x = t.cat([reg_result, dest], dim=2)
+            points_pred = registration(reg_out,  points_pred, self.M)
+            points_preds.append(points_pred)
+            x = t.cat([points_pred, dest], dim=2)
             cls_outs.append(cls_out)
             reg_outs.append(reg_out)
             use_for_cls_losses.append(use_for_cls_loss)
-        return cls_outs, reg_outs, use_for_cls_losses, reg_results
+        return use_for_cls_losses, points_preds
 
 
 def registration(reg_out, point_set, M):
@@ -196,5 +196,5 @@ def registration(reg_out, point_set, M):
 if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = RefineNet(1, 5, 512, 9)
-    cls_outs, reg_outs, use_for_cls_losses, reg_results = model(d)
+    use_for_cls_losses, reg_results = model(d)
     print(reg_results[0].size())

@@ -79,11 +79,41 @@ class ClsRegLoss(nn.Module):
         return total_loss
 
 
+class RefineLoss(nn.Module):
+
+    def __init__(self, alpha, beta):
+        """
+
+        :param alpha: weight of cls loss
+        :param beta: weight of registration loss
+        """
+        super(RefineLoss, self).__init__()
+        self.cls_reg_loss = ClsRegLoss(alpha, beta)
+
+    def forward(self, use_for_cls_losses, cls_target, points_preds, points_target):
+        """
+
+        :param use_for_cls_losses: list of use_for_cls_loss
+        :param cls_target: ground truth of classification task, shape like (N, C), value of item is 0 or 1, 1 represent inlier, 0 represent outlier
+        :param points_preds: list of points_pred
+        :param points_target:
+        :return:
+        """
+        total_loss = 0
+        for i in range(len(use_for_cls_losses)):
+            use_for_cls_loss = use_for_cls_losses[i]
+            points_pred = points_preds[i]
+            loss = self.cls_reg_loss(use_for_cls_loss, cls_target, points_pred, points_target)
+            total_loss += loss
+        avg_loss = total_loss / len(use_for_cls_losses)
+        return avg_loss
+
+
 if __name__ == "__main__":
-    use_for_cls_loss = t.randn(2, 256)
+    use_for_cls_loss = [t.randn(2, 256) for i in range(10)]
     cls_target = t.randint(0, 2, (2, 256))
-    out = t.randn(2, 256, 3)
+    out = [t.randn(2, 256, 3) for i in range(10)]
     tar = t.randn(2, 256, 3)
-    model = ClsRegLoss(0.5, 0.5)
+    model = RefineLoss(0.5, 0.5)
     loss = model(use_for_cls_loss, cls_target, out, tar)
     print(loss)

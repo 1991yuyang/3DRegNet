@@ -194,4 +194,4 @@ if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = RefineNet(10, 5, 512, 9)
     cls_outs, reg_outs, use_for_cls_losses = model(d)
-
+    print(cls_outs[1].size())

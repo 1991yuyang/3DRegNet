@@ -39,19 +39,51 @@ class RegLoss(nn.Module):
         super(RegLoss, self).__init__()
         self.l1 = nn.L1Loss()
 
-    def forward(self, point1, point2):
+    def forward(self, points_pred, points_target):
         """
 
-        :param point1: registration result point, shape like (N, num_of_correspondence, 3)
-        :param point2: ground truth point or target point of registation, shape like (N, num_of_correspondence, 3)
+        :param points_pred: registration result point, shape like (N, num_of_correspondence, 3)
+        :param points_target: ground truth point or target point of registation, shape like (N, num_of_correspondence, 3)
         :return:
         """
-        pass
+        loss = self.l1(points_pred.view((-1, 3)), points_target.view((-1, 3)))
+        return loss
+
+
+class ClsRegLoss(nn.Module):
+
+    def __init__(self, alpha, beta):
+        """
+
+        :param alpha: weight of cls loss
+        :param beta: weight of registration loss
+        """
+        super(ClsRegLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.reg = RegLoss()
+        self.cls = CLSLoss()
+
+    def forward(self, use_for_cls_loss, cls_target, points_pred, points_target):
+        """
+
+        :param use_for_cls_loss: cls module features for cls loss caculation, shape like (N, C)
+        :param cls_target: ground truth of classification task, shape like (N, C), value of item is 0 or 1, 1 represent inlier, 0 represent outlier
+        :param points_pred: registration result point, shape like (N, num_of_correspondence, 3)
+        :param points_target: ground truth point or target point of registation, shape like (N, num_of_correspondence, 3)
+        :return:
+        """
+        cls_loss = self.cls(use_for_cls_loss, cls_target)
+        reg_loss = self.reg(points_pred, points_target)
+        total_loss = self.alpha * cls_loss + self.beta * reg_loss
+        return total_loss
 
 
 if __name__ == "__main__":
-    out = t.randn(2, 3)
-    tar = t.randint(0, 2, (2, 3))
-    model = CLSLoss()
-    loss = model(out, tar)
+    use_for_cls_loss = t.randn(2, 256)
+    cls_target = t.randint(0, 2, (2, 256))
+    out = t.randn(2, 256, 3)
+    tar = t.randn(2, 256, 3)
+    model = ClsRegLoss(0.5, 0.5)
+    loss = model(use_for_cls_loss, cls_target, out, tar)
     print(loss)

@@ -197,4 +197,3 @@ if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = RefineNet(1, 5, 512, 9)
     cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)
-    print(reg_results[0].size())

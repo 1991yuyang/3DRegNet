@@ -37,7 +37,7 @@ class RegLoss(nn.Module):
 
     def __init__(self):
         super(RegLoss, self).__init__()
-
+        self.l1 = nn.L1Loss()
 
     def forward(self, point1, point2):
         """

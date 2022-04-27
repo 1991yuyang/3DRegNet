@@ -175,7 +175,7 @@ class RefineNet(nn.Module):
             cls_outs.append(cls_out)
             reg_outs.append(reg_out)
             use_for_cls_losses.append(use_for_cls_loss)
-        return use_for_cls_losses, points_preds
+        return cls_outs, reg_outs, use_for_cls_losses, points_preds
 
 
 def registration(reg_out, point_set, M):
@@ -196,5 +196,5 @@ def registration(reg_out, point_set, M):
 if __name__ == "__main__":
     d = t.randn(2, 512, 6)
     model = RefineNet(1, 5, 512, 9)
-    use_for_cls_losses, reg_results = model(d)
+    cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)
     print(reg_results[0].size())

@@ -160,7 +160,7 @@ class RefineNet(nn.Module):
             self.block.add_module("regnet_%d" % (i,), ThreeDRegNet(res_block_count, num_of_correspondence, M))
 
     def forward(self, x):
-        cls_outs = []  # shape of item is (N, num_of_correspondence)
+        cls_outs = []  # shape of item is (N, num_of_correspondence), value between 0 and 1
         reg_outs = []  # shape of item is (N, M + 3)
         use_for_cls_losses = []  # shape of item is (N, num_of_correspondence)
         points_preds = []   # shape of item is (N, num_of_correspondence, 3)

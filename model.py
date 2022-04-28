@@ -220,7 +220,6 @@ def lie_to_rot_mat(reg_out, M):
     R = t.cos(norm_tensor).unsqueeze(-1) * t.cat([t.eye(3).unsqueeze(0).type(rotation_param.dtype).to(rotation_param.device)] * norm_tensor.size()[0], dim=0) + \
                    (1 - t.cos(norm_tensor)).unsqueeze(-1) * t.bmm(unit_tesnor, t.transpose(unit_tesnor, 1, 2)) + \
                    t.sin(norm_tensor).unsqueeze(-1) * unit_hat
-    # print(R)
     return R
 
 

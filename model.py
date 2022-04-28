@@ -120,7 +120,7 @@ class RegNet(nn.Module):
         concate_results = t.cat(pool_results, dim=1)
         concate_results = concate_results.view((concate_results.size()[0], len(pool_results), -1))  # shape like: (N, res_block_count + 1, F)
         concate_results = concate_results.unsqueeze(1)  # (N, 1, res_block_count + 1, F)
-        conv_result = self.conv(concate_results).view((concate_results.size()[0], -1))  # (N, 8, (res_block_count + 1) // 2, F)
+        conv_result = self.conv(concate_results).view((concate_results.size()[0], -1))  # (N, 8, res_block_count // 2 + 1, F)
         linear1_result = self.linear1(conv_result)
         reg_result = self.linear2(linear1_result)
         return reg_result

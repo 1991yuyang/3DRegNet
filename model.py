@@ -170,18 +170,22 @@ class RefineNet(nn.Module):
         reg_outs = []  # shape of item is (N, M + 3)
         use_for_cls_losses = []  # shape of item is (N, num_of_correspondence)
         points_preds = []   # shape of item is (N, num_of_correspondence, 3)
+        rotation_mats = []  # shape of item is (N, 3, 3)
+        trans_mats = []  # shape of item is (N, 3)
         points_pred = x[:, :, :x.size()[2] // 2]  # point after registrate, shape like (N, num_of_correspondence, 3)
         dest = x[:, :, x.size()[2] // 2:]  # target point of registration, shape like (N, num_of_correspondence, 3)
 
         for n, m in self.block._modules.items():
             cls_out, reg_out, use_for_cls_loss = m(x)
-            points_pred = registration(reg_out,  points_pred, self.M, self.use_lie)
+            points_pred, rotation_mat, trans_mat = registration(reg_out,  points_pred, self.M, self.use_lie)
             points_preds.append(points_pred)
             x = t.cat([points_pred, dest], dim=2)
             cls_outs.append(cls_out)
             reg_outs.append(reg_out)
             use_for_cls_losses.append(use_for_cls_loss)
-        return cls_outs, reg_outs, use_for_cls_losses, points_preds
+            rotation_mats.append(rotation_mat)
+            trans_mats.append(trans_mat)
+        return rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds
 
 
 def registration(reg_out, point_set, M, use_lie):
@@ -195,14 +199,14 @@ def registration(reg_out, point_set, M, use_lie):
     """
     if use_lie:
         assert M == 3, "M should be 3"
-        rotation_mat = lie_to_rot_mat(reg_out, M)
+        rotation_mat = lie_to_rot_mat(reg_out, M)  # shape like (N, 3, 3)
     else:
         assert M == 9, "M should be 9"
-        rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, M // 3)
-    shift_map = reg_out[:, M:]  # shape like (N, 3)
+        rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, 3)
+    trans_mat = reg_out[:, M:]  # shape like (N, 3)
     rot_result = t.bmm(rotation_mat, point_set.permute(dims=[0, 2, 1])).permute(dims=[0, 2, 1])  # shape like (N, num_of_correspondence, M // 3)
-    shift_result = rot_result + shift_map.unsqueeze(1)  # shape like (N, num_of_correspondence, M // 3)
-    return shift_result
+    result = rot_result + trans_mat.unsqueeze(1)  # shape like (N, num_of_correspondence, M // 3)
+    return result, rotation_mat, trans_mat
 
 
 def lie_to_rot_mat(reg_out, M):
@@ -229,5 +233,7 @@ def lie_to_rot_mat(reg_out, M):
 if __name__ == "__main__":
     lie_to_rot_mat(t.randn(2, 3), 3)
     d = t.randn(2, 512, 6)
-    model = RefineNet(10, 5, 512, 9, True)
-    cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)
+    model = RefineNet(10, 5, 512, 3, True)
+    rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)
+    for tra in trans_mats:
+        print(tra.size())

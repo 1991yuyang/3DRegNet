@@ -219,7 +219,8 @@ def lie_to_rot_mat(reg_out, M):
     # rotation_mat[:, [3, 6, 7]] = -unit_tesnor.view((unit_tesnor.size()[0], -1))
     # rotation_mat = rotation_mat.view((rotation_mat.size()[0], 3, 3))
     # rotation_mat = t.cos(norm_tensor.unsqueeze(-1) * t.cat([t.eye(3).unsqueeze(0)] * norm_tensor.size()[0], dim=0)) + (1 - t.cos(norm_tensor)).unsqueeze(-1) * t.bmm(unit_tesnor, unit_tesnor.permute(dims=[0, 2, 1])) + t.sin(norm_tensor.unsqueeze(-1) * rotation_mat)
-    # ##########
+    # print("1:", rotation_mat)
+    # # ##########
     rotation_mat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)
     rotation_mat[:, [1, 2, 5]] = rotation_param
     rotation_mat[:, [3, 6, 7]] = -rotation_param

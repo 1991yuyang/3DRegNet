@@ -106,7 +106,7 @@ class RegNet(nn.Module):
         self.context_bn = ContextBN()
         self.conv = nn.Conv2d(in_channels=1, out_channels=8, kernel_size=3, stride=(2, 1), padding=(1, 1))
         self.linear1 = nn.Sequential(
-            nn.Linear(in_features=8 * ((res_block_count + 1) // 2) * 128, out_features=256),
+            nn.Linear(in_features=8 * (res_block_count // 2 + 1) * 128, out_features=256),
             nn.ReLU()
         )
         self.linear2 = nn.Linear(in_features=256, out_features=M + 3)
@@ -152,13 +152,22 @@ class ThreeDRegNet(nn.Module):
 
 class RefineNet(nn.Module):
 
-    def __init__(self, threeDRegNet_count, res_block_count, num_of_correspondence, M, use_lie):
+    def __init__(self, threeDRegNet_count, res_block_counts, num_of_correspondence, M, use_lie):
+        """
+
+        :param threeDRegNet_count: count of threeDRegNet
+        :param res_block_counts: list of int, item represents count of res_block of every threeDRegNet
+        :param num_of_correspondence: number of correspondence of one point set
+        :param M: count of parameter of rotation
+        :param use_lie: True will predict parameters of lie algebra, False will predict rotation matrix directly
+        """
         super(RefineNet, self).__init__()
+        assert len(res_block_counts) == threeDRegNet_count, "number of item of res_block_counts should equal to threeDRegNet_count"
         self.M = M
         self.use_lie = use_lie
         self.block = nn.Sequential()
         for i in range(threeDRegNet_count):
-            self.block.add_module("regnet_%d" % (i,), ThreeDRegNet(res_block_count, num_of_correspondence, M))
+            self.block.add_module("regnet_%d" % (i,), ThreeDRegNet(res_block_counts[i], num_of_correspondence, M))
 
     def forward(self, x):
         """
@@ -225,5 +234,5 @@ def lie_to_rot_mat(reg_out, M):
 
 if __name__ == "__main__":
     d = t.randn(2, 512, 6)
-    model = RefineNet(10, 5, 512, 3, True)
+    model = RefineNet(3, [4, 5, 6], 512, 3, True)
     rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)

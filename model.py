@@ -224,13 +224,6 @@ def lie_to_rot_mat(reg_out, M):
 
 
 if __name__ == "__main__":
-    from metric import RotMatMetric, TransMetric
-    lie_to_rot_mat(t.randn(2, 3), 3)
     d = t.randn(2, 512, 6)
     model = RefineNet(10, 5, 512, 3, True)
     rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)
-    rotation_mat_gt = t.randn(2, 3, 3)
-    trans_mat_gt = t.randn(2, 3)
-    rot_met = RotMatMetric(rotation_mats, rotation_mat_gt)
-    trans_met = TransMetric(trans_mats, trans_mat_gt)
-    # print(rot_met, trans_met)

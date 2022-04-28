@@ -211,18 +211,16 @@ def registration(reg_out, point_set, M, use_lie):
 
 def lie_to_rot_mat(reg_out, M):
     rotation_param = reg_out[:, :M]
-    ##########
-    norm_tensor = t.norm(rotation_param, dim=1, keepdim=True)
-    unit_tesnor = (rotation_param / norm_tensor).view((rotation_param.size()[0], -1, 1))
-    rotation_mat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)
-    rotation_mat[:, [5, 2, 1]] = t.cat([-unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 0:1], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 1:2], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 2:]], dim=1)
-    rotation_mat[:, [3, 6, 7]] = t.cat([-unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 2:], -unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 1:2], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 0:1]], dim=1)
-    rotation_mat = rotation_mat.view((rotation_mat.size()[0], 3, 3))
+    norm_tensor = t.norm(rotation_param, dim=1, keepdim=True)  # shape (N, 1)
+    unit_tesnor = (rotation_param / norm_tensor).unsqueeze(-1)  # shape (N, 3, 1)
+    unit_hat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)
+    unit_hat[:, [5, 2, 1]] = t.cat([-unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 0:1], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 1:2], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 2:]], dim=1)
+    unit_hat[:, [3, 6, 7]] = t.cat([unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 2:], -unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 1:2], unit_tesnor.view((unit_tesnor.size()[0], -1))[:, 0:1]], dim=1)
+    unit_hat = unit_hat.view((unit_hat.size()[0], 3, 3))  # shape (N, 3, 3)
     R = t.cos(norm_tensor).unsqueeze(-1) * t.cat([t.eye(3).unsqueeze(0).type(rotation_param.dtype).to(rotation_param.device)] * norm_tensor.size()[0], dim=0) + \
                    (1 - t.cos(norm_tensor)).unsqueeze(-1) * t.bmm(unit_tesnor, t.transpose(unit_tesnor, 1, 2)) + \
-                   t.sin(norm_tensor).unsqueeze(-1) * rotation_mat
-    # print("det:", t.det(R[0]))
-    # print(R.size())
+                   t.sin(norm_tensor).unsqueeze(-1) * unit_hat
+    # print(R)
     return R
 
 
@@ -236,4 +234,4 @@ if __name__ == "__main__":
     trans_mat_gt = t.randn(2, 3)
     rot_met = RotMatMetric(rotation_mats, rotation_mat_gt)
     trans_met = TransMetric(trans_mats, trans_mat_gt)
-    print(rot_met, trans_met)
+    # print(rot_met, trans_met)

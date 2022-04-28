@@ -95,7 +95,7 @@ class ContextBN(nn.Module):
         pass
 
     def forward(self, x):
-        x = (x - t.mean(x, dim=1, keepdim=True)) / t.std(x, dim=1, keepdim=True)
+        x = (x - t.mean(x, dim=1, keepdim=True)) / (t.std(x, dim=1, keepdim=True) + 1e-10)
         return x
 
 
@@ -152,9 +152,10 @@ class ThreeDRegNet(nn.Module):
 
 class RefineNet(nn.Module):
 
-    def __init__(self, threeDRegNet_count, res_block_count, num_of_correspondence, M):
+    def __init__(self, threeDRegNet_count, res_block_count, num_of_correspondence, M, use_lie):
         super(RefineNet, self).__init__()
         self.M = M
+        self.use_lie = use_lie
         self.block = nn.Sequential()
         for i in range(threeDRegNet_count):
             self.block.add_module("regnet_%d" % (i,), ThreeDRegNet(res_block_count, num_of_correspondence, M))
@@ -169,7 +170,7 @@ class RefineNet(nn.Module):
 
         for n, m in self.block._modules.items():
             cls_out, reg_out, use_for_cls_loss = m(x)
-            points_pred = registration(reg_out,  points_pred, self.M)
+            points_pred = registration(reg_out,  points_pred, self.M, self.use_lie)
             points_preds.append(points_pred)
             x = t.cat([points_pred, dest], dim=2)
             cls_outs.append(cls_out)
@@ -178,22 +179,50 @@ class RefineNet(nn.Module):
         return cls_outs, reg_outs, use_for_cls_losses, points_preds
 
 
-def registration(reg_out, point_set, M):
+def registration(reg_out, point_set, M, use_lie):
     """
 
+    :param use_lie: True will predict parameter of lie algebra, False will predict rotation matrix directly
     :param M: number of parameter of rotation, like 9 means 3 * 3 rotation matrix
     :param reg_out: reg_out, shape like (N, M + 3), N is the number of point set
     :param point_set: point set, shape like (N, num_of_correspondence, 3), N is the number of point set, num_of_correspondence is the number of point correspondence of one point set, 3 is one point
     :return:
     """
-    rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, M // 3)
+    if use_lie:
+        assert M == 3, "M should be 3"
+        rotation_mat = lie_to_rot_mat(reg_out, M)
+    else:
+        assert M == 9, "M should be 9"
+        rotation_mat = reg_out[:, :M].view((reg_out.size()[0], point_set.size()[2], -1))  # shape like (N, 3, M // 3)
     shift_map = reg_out[:, M:]  # shape like (N, 3)
     rot_result = t.bmm(rotation_mat, point_set.permute(dims=[0, 2, 1])).permute(dims=[0, 2, 1])  # shape like (N, num_of_correspondence, M // 3)
     shift_result = rot_result + shift_map.unsqueeze(1)  # shape like (N, num_of_correspondence, M // 3)
     return shift_result
 
 
+def lie_to_rot_mat(reg_out, M):
+    rotation_param = reg_out[:, :M]
+    # ##########
+    # norm_tensor = t.norm(rotation_param, dim=1, keepdim=True)
+    # unit_tesnor = (rotation_param / norm_tensor).view((rotation_param.size()[0], -1, 1))
+    # rotation_mat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)
+    # rotation_mat[:, [1, 2, 5]] = unit_tesnor.view((unit_tesnor.size()[0], -1))
+    # rotation_mat[:, [3, 6, 7]] = -unit_tesnor.view((unit_tesnor.size()[0], -1))
+    # rotation_mat = rotation_mat.view((rotation_mat.size()[0], 3, 3))
+    # rotation_mat = t.cos(norm_tensor.unsqueeze(-1) * t.cat([t.eye(3).unsqueeze(0)] * norm_tensor.size()[0], dim=0)) + (1 - t.cos(norm_tensor)).unsqueeze(-1) * t.bmm(unit_tesnor, unit_tesnor.permute(dims=[0, 2, 1])) + t.sin(norm_tensor.unsqueeze(-1) * rotation_mat)
+    # ##########
+    rotation_mat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)
+    rotation_mat[:, [1, 2, 5]] = rotation_param
+    rotation_mat[:, [3, 6, 7]] = -rotation_param
+    rotation_mat = rotation_mat.view((rotation_mat.size()[0], 3, 3))
+    R = t.exp(rotation_mat)
+    # print("2:", R)
+    # print("================")
+    return R
+
+
 if __name__ == "__main__":
+    lie_to_rot_mat(t.randn(2, 3), 3)
     d = t.randn(2, 512, 6)
-    model = RefineNet(1, 5, 512, 9)
+    model = RefineNet(10, 5, 512, 9, True)
     cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d)

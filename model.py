@@ -207,7 +207,7 @@ def registration(reg_out, point_set, M, use_lie):
     :return:
     """
     if use_lie:
-        assert M == 3, "M should be 3"
+        assert M == 3, "M should be 3 when use_lie is True"
         rotation_mat = lie_to_rot_mat(reg_out, M)  # shape like (N, 3, 3)
     else:
         assert M == 9, "M should be 9"
@@ -219,7 +219,7 @@ def registration(reg_out, point_set, M, use_lie):
 
 
 def lie_to_rot_mat(reg_out, M):
-    rotation_param = reg_out[:, :M]
+    rotation_param = reg_out[:, :M]  # shape (N, 3)
     norm_tensor = t.norm(rotation_param, dim=1, keepdim=True)  # shape (N, 1)
     unit_tesnor = (rotation_param / norm_tensor).unsqueeze(-1)  # shape (N, 3, 1)
     unit_hat = t.zeros(size=(rotation_param.size()[0], 9)).type(rotation_param.dtype).to(rotation_param.device)

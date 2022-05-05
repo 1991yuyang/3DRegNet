@@ -73,7 +73,7 @@ class MySet(data.Dataset):
         :return:
         """
         for i, pcd in enumerate(pcd_list):
-            pcd.paint_uniform_color(COLOR_MAP[40 - i])
+            pcd.paint_uniform_color(COLOR_MAP[i])
         o3d.visualization.draw_geometries(pcd_list, "pcd")
 
     def random_generate_R_t(self):

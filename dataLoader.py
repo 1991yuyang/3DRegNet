@@ -5,6 +5,16 @@ import open3d as o3d
 import numpy as np
 from numpy import random as rd
 from colors import COLOR_MAP
+"""
+train_data_dir:
+    pcd1.ply
+    pcd2.ply
+    ......
+valid_data_dir:
+    pcd1.ply
+    pcd2.ply
+    ......
+"""
 
 
 class MySet(data.Dataset):
@@ -51,21 +61,42 @@ class MySet(data.Dataset):
         return pcd_tensor
 
     def show_pcd(self, pcd_list):
+        """
+
+        :param pcd_list: list of pcd
+        :return:
+        """
         for i, pcd in enumerate(pcd_list):
             pcd.paint_uniform_color(COLOR_MAP[40 - i])
         o3d.visualization.draw_geometries(pcd_list, "pcd")
 
     def random_generate_R_t(self):
+        """
+        random generate rotation matrix and translate vector
+        :return:
+        """
         random_lie_param = rd.uniform(self.R_range[0], self.R_range[1], (3, 1))
         R = t.tensor(o3d.geometry.get_rotation_matrix_from_axis_angle(random_lie_param)).type(t.FloatTensor)  # rotation matrix, centroid is the center of rotation
         t_vec = t.tensor(rd.uniform(self.t_range[0], self.t_range[1], 3)).type(t.FloatTensor)
         return R, t_vec
 
     def rotate_pcd(self, pcd, R):
+        """
+
+        :param pcd: point cloud data
+        :param R: rotation matrix, shape is (3, 3)
+        :return:
+        """
         pcd_after_rotate = pcd.rotate(R)
         return pcd_after_rotate
 
     def translate_pcd(self, pcd, t):
+        """
+
+        :param pcd: point cloud data
+        :param t: translate vector, shape is (3,)
+        :return:
+        """
         pcd_after_translate = pcd.translate(t)
         return pcd_after_translate
 

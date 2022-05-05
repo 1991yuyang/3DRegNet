@@ -5,6 +5,7 @@ import open3d as o3d
 import numpy as np
 from numpy import random as rd
 from colors import COLOR_MAP
+import os
 """
 train_data_dir:
     pcd1.ply
@@ -19,9 +20,10 @@ valid_data_dir:
 
 class MySet(data.Dataset):
 
-    def __init__(self, voxel_size, R_range, t_range):
+    def __init__(self, data_dir, voxel_size, R_range, t_range):
         """
 
+        :param data_dir: ply data dir
         :param voxel_size: voxel size for downsample one point cloud
         :param R_range: value range of item of rotation matrix
         :param t_range: value range of item of translate vector
@@ -29,12 +31,16 @@ class MySet(data.Dataset):
         self.voxel_size = voxel_size
         self.R_range = R_range
         self.t_range = t_range
+        self.pcd_pths = [os.path.join(data_dir, i) for i in os.listdir(data_dir)]
 
     def __getitem__(self, index):
-        pass
+        pcd_pth = self.pcd_pths[index]
+        pcd = self.load_one_pcd(pcd_pth)
+        target = deepcopy(pcd)
+        source, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
 
     def __len__(self):
-        pass
+        return len(self.pcd_pths)
 
     def load_one_pcd(self, pcd_pth):
         pcd = o3d.io.read_point_cloud(pcd_pth)
@@ -100,15 +106,18 @@ class MySet(data.Dataset):
         pcd_after_translate = pcd.translate(t)
         return pcd_after_translate
 
+    def random_transform(self, pcd):
+        R, t_vec = self.random_generate_R_t()
+        pcd_after_rotate = self.rotate_pcd(pcd, R)
+        pcd_after_translate = self.translate_pcd(pcd_after_rotate, t_vec)
+        return pcd_after_translate, R, t_vec
+
 
 if __name__ == "__main__":
     from copy import deepcopy
-    pcd_pth = r"F:\python_project\test_open3d\cloud_image_00000.ply"
-    s = MySet(0.001, [-10, 10], [-10, 10])
-    pcd = s.load_one_pc(pcd_pth)
-    pcd, fpfh = s.preprocess_point_cloud(pcd)
-    pcd_orig = deepcopy(pcd)
-    R, t_vec = s.random_generate_R_t()
-    pcd_after_rotation = s.rotate_pcd(pcd, R)
-    pcd_after_translate = s.translate_pcd(pcd_after_rotation, t_vec)
-    s.show_pcd([pcd_orig, pcd_after_translate])
+    pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
+    voxel_size = 0.01
+    R_range = [2, 10]
+    t_range = [-10, 10]
+    s = MySet(pcd_dir, voxel_size, R_range, t_range)
+    s[0]

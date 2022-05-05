@@ -158,7 +158,7 @@ class RefineNet(nn.Module):
         :param threeDRegNet_count: count of threeDRegNet
         :param res_block_counts: list of int, item represents count of res_block of every threeDRegNet
         :param num_of_correspondence: number of correspondence of one point set
-        :param M: count of parameter of rotation
+        :param M: count of parameter of rotation, 9 if predict rotation matrix directly, 3 if predict lie param
         :param use_lie: True will predict parameters of lie algebra, False will predict rotation matrix directly
         """
         super(RefineNet, self).__init__()

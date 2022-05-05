@@ -172,7 +172,7 @@ class RefineNet(nn.Module):
     def forward(self, x):
         """
 
-        :param x: shape like (N, num_of_correspondence, 6), note that x[:, :, :3] is the point set which is registrated
+        :param x: shape like (N, num_of_correspondence, 6), note that x[:, :, :3] is the source point, x[:, :, 3:6] is the template point
         :return:
         """
         cls_outs = []  # shape of item is (N, num_of_correspondence), value between 0 and 1

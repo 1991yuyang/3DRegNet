@@ -36,7 +36,7 @@ class MySet(data.Dataset):
     def __len__(self):
         pass
 
-    def load_one_pc(self, pcd_pth):
+    def load_one_pcd(self, pcd_pth):
         pcd = o3d.io.read_point_cloud(pcd_pth)
         return pcd
 

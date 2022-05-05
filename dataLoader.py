@@ -35,6 +35,11 @@ class MySet(data.Dataset):
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feature, max_nn=100))
         return pcd_down, pcd_fpfh
 
+    def pcd2tensor(self, pcd):
+        print(type(pcd.points))
+        pcd_tensor = t.tensor(pcd.points)
+        return pcd_tensor
+
     def show_pcd(self, pcd):
         pcd.paint_uniform_color([1, 0.706, 0])
         o3d.visualization.draw_geometries([pcd], "pcd")
@@ -42,7 +47,9 @@ class MySet(data.Dataset):
 
 if __name__ == "__main__":
     pcd_pth = r"F:\python_project\test_open3d\cloud_image_00000.ply"
-    s = MySet(0.1)
+    s = MySet(0.001)
     pcd = s.load_one_pc(pcd_pth)
     pcd, fpfh = s.preprocess_point_cloud(pcd)
     s.show_pcd(pcd)
+    pcd_tensor = s.pcd2tensor(pcd)
+    print(pcd_tensor)

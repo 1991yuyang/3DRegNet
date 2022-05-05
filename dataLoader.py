@@ -1,3 +1,5 @@
+import copy
+
 from torch.utils import data
 import torch as t
 from torch import nn
@@ -36,8 +38,12 @@ class MySet(data.Dataset):
     def __getitem__(self, index):
         pcd_pth = self.pcd_pths[index]
         pcd = self.load_one_pcd(pcd_pth)
-        target = deepcopy(pcd)
+        target = copy.deepcopy(pcd)
         source, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
+        # p1 = (t.matmul(R, t.tensor(np.asarray(target.points)).type(t.FloatTensor).permute(dims=[1, 0])).permute(dims=[1, 0]) + t_vec.view((-1,))).numpy()
+        # p = o3d.geometry.PointCloud()
+        # p.points = o3d.utility.Vector3dVector(p1)
+        # self.show_pcd([target, source, p])
 
     def __len__(self):
         return len(self.pcd_pths)
@@ -82,8 +88,8 @@ class MySet(data.Dataset):
         :return:
         """
         random_lie_param = rd.uniform(self.R_range[0], self.R_range[1], (3, 1))
-        R = t.tensor(o3d.geometry.get_rotation_matrix_from_axis_angle(random_lie_param)).type(t.FloatTensor)  # rotation matrix, centroid is the center of rotation
-        t_vec = t.tensor(rd.uniform(self.t_range[0], self.t_range[1], 3)).type(t.FloatTensor)
+        R = t.tensor(o3d.geometry.get_rotation_matrix_from_axis_angle(random_lie_param)).type(t.FloatTensor)  # rotation matrix
+        t_vec = t.tensor(rd.uniform(self.t_range[0], self.t_range[1], (3, 1))).type(t.FloatTensor)
         return R, t_vec
 
     def rotate_pcd(self, pcd, R):
@@ -93,7 +99,7 @@ class MySet(data.Dataset):
         :param R: rotation matrix, shape is (3, 3)
         :return:
         """
-        pcd_after_rotate = pcd.rotate(R)
+        pcd_after_rotate = pcd.rotate(R, center=(0, 0, 0))
         return pcd_after_rotate
 
     def translate_pcd(self, pcd, t):
@@ -117,7 +123,7 @@ if __name__ == "__main__":
     from copy import deepcopy
     pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
     voxel_size = 0.01
-    R_range = [2, 10]
+    R_range = [-3.14, 3.14]
     t_range = [-10, 10]
     s = MySet(pcd_dir, voxel_size, R_range, t_range)
     s[0]

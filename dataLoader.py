@@ -193,6 +193,11 @@ def find_feature_dist_thresh(pcd_dir, voxel_size, R_range, t_range, select_point
     return np.mean(dist_med_lst)
 
 
+def make_loader(data_dir, voxel_size, R_range, t_range, select_point_count, noise_strength, feature_distance_tresh, batch_size, num_workers):
+    loader = iter(data.DataLoader(MySet(data_dir, voxel_size, R_range, t_range, select_point_count, noise_strength, feature_distance_tresh), batch_size=batch_size, shuffle=True, drop_last=True, num_workers=num_workers))
+    return loader
+
+
 if __name__ == "__main__":
     pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
     voxel_size = 0.01

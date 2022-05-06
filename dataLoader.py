@@ -22,31 +22,51 @@ valid_data_dir:
 
 class MySet(data.Dataset):
 
-    def __init__(self, data_dir, voxel_size, R_range, t_range):
+    def __init__(self, data_dir, voxel_size, R_range, t_range, select_point_count, noise_strength):
         """
 
         :param data_dir: ply data dir
         :param voxel_size: voxel size for downsample one point cloud
         :param R_range: value range of item of rotation matrix
         :param t_range: value range of item of translate vector
+        :param select_point_count: point count of one correspondence
+        :param noise_strenght: float, specify the noise strenght while add gaussian noise to source pcd
         """
         self.voxel_size = voxel_size
         self.R_range = R_range
         self.t_range = t_range
+        self.select_point_count = select_point_count
         self.pcd_pths = [os.path.join(data_dir, i) for i in os.listdir(data_dir)]
+        self.noise_strength = noise_strength
 
     def __getitem__(self, index):
         pcd_pth = self.pcd_pths[index]
         pcd = self.load_one_pcd(pcd_pth)
         target = copy.deepcopy(pcd)
         source, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
-        # p1 = (t.matmul(R, t.tensor(np.asarray(target.points)).type(t.FloatTensor).permute(dims=[1, 0])).permute(dims=[1, 0]) + t_vec.view((-1,))).numpy()
-        # p = o3d.geometry.PointCloud()
-        # p.points = o3d.utility.Vector3dVector(p1)
-        # self.show_pcd([target, source, p])
+        source = self.add_gauss_noise_to_pcd(source)  # add noise to source
+        target_down, target_down_fpfh = self.preprocess_point_cloud(target)
+        source_down, source_down_fpfh = self.preprocess_point_cloud(source)
+        result = self.execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
+        source_down.transform(result.transformation)
+        self.show_pcd([source_down, target_down])
 
     def __len__(self):
         return len(self.pcd_pths)
+
+    def add_gauss_noise_to_pcd(self, pcd):
+        point = np.asarray(pcd.points)
+        signal = point
+        SNR = 1 / self.noise_strength * 10  # value为指定噪声强度
+        noise = np.random.randn(signal.shape[0], signal.shape[1])
+        noise = noise - np.mean(noise)
+        signal_power = np.linalg.norm(signal) ** 2 / signal.size
+        noise_variance = signal_power / np.power(10, (SNR / 10))
+        noise = (np.sqrt(noise_variance) / np.std(noise)) * noise
+        signal_noise = noise + signal
+        pcd_noise = o3d.geometry.PointCloud()
+        pcd_noise.points = o3d.utility.Vector3dVector(signal_noise)
+        return pcd_noise
 
     def load_one_pcd(self, pcd_pth):
         pcd = o3d.io.read_point_cloud(pcd_pth)
@@ -118,12 +138,26 @@ class MySet(data.Dataset):
         pcd_after_translate = self.translate_pcd(pcd_after_rotate, t_vec)
         return pcd_after_translate, R, t_vec
 
+    def execute_global_registration(self, source_down, target_down, source_fpfh, target_fpfh):
+       distance_threshold = self.voxel_size * 1.5
+       # print(":: RANSAC registration on downsampled point clouds.")
+       # print("   Since the downsampling voxel size is %.3f," % self.voxel_size)
+       # print("   we use a liberal distance threshold %.3f." % distance_threshold)
+       result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
+           source_down, target_down, source_fpfh, target_fpfh, False, distance_threshold,
+           o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
+               o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
+               o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
+                   distance_threshold)
+           ], o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 500))
+       return result
+
 
 if __name__ == "__main__":
     from copy import deepcopy
     pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
     voxel_size = 0.01
     R_range = [-3.14, 3.14]
-    t_range = [-10, 10]
-    s = MySet(pcd_dir, voxel_size, R_range, t_range)
+    t_range = [-1, 1]
+    s = MySet(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12)
     s[0]

@@ -42,14 +42,18 @@ class MySet(data.Dataset):
     def __getitem__(self, index):
         pcd_pth = self.pcd_pths[index]
         pcd = self.load_one_pcd(pcd_pth)
-        target = copy.deepcopy(pcd)
-        source, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
+        source = copy.deepcopy(pcd)
+        target, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
         source = self.add_gauss_noise_to_pcd(source)  # add noise to source
         target_down, target_down_fpfh = self.preprocess_point_cloud(target)
         source_down, source_down_fpfh = self.preprocess_point_cloud(source)
-        result = self.execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
-        source_down.transform(result.transformation)
-        self.show_pcd([source_down, target_down])
+        fpfh_regis_result = self.execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
+        # print(R)
+        # print(t_vec)
+        # print(fpfh_regis_result.transformation)
+        # print(fpfh_regis_result.correspondence_set)
+        # source_down.transform(fpfh_regis_result.transformation)
+        # self.show_pcd([source_down, target_down])
 
     def __len__(self):
         return len(self.pcd_pths)

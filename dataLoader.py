@@ -68,7 +68,7 @@ class MySet(data.Dataset):
         # self.show_pcd([sou, tar])
         d = t.tensor(np.concatenate([source_select, target_select], axis=1)).type(t.FloatTensor)
         class_label = t.tensor(class_label).type(t.FloatTensor)
-        return d, class_label, feature_dist
+        return d, class_label, feature_dist, R, t_vec.view((3,))
 
     def __len__(self):
         return len(self.pcd_pths)
@@ -187,7 +187,7 @@ class MySet(data.Dataset):
 def find_feature_dist_thresh(pcd_dir, voxel_size, R_range, t_range, select_point_count, noise_strength):
     s = MySet(pcd_dir, voxel_size, R_range, t_range, select_point_count, noise_strength, 0.1)
     dist_med_lst = []
-    for _, _, feature_dist in s:
+    for _, _, feature_dist, _, _ in s:
         dist_med = np.median(feature_dist)
         dist_med_lst.append(dist_med)
     return np.mean(dist_med_lst)

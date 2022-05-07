@@ -16,7 +16,7 @@ class CLSLoss(nn.Module):
         :param target: ground truth, shape like (N, C), value of item is 0 or 1, 1 represent inlier, 0 represent outlier
         :return:
         """
-        target = target.type(t.FloatTensor)
+        target = target.type(use_for_cls_loss.dtype).to(use_for_cls_loss.device)
         pos_neg_weights_of_every_sample = t.cat([t.sum(target, dim=1, keepdim=True), t.sum(1 - target, dim=1, keepdim=True)], dim=1) / target.size()[1]
         pred_prob = self.sigmoid(use_for_cls_loss)
         total_loss = 0
@@ -27,7 +27,7 @@ class CLSLoss(nn.Module):
             weight_of_curr_sample = t.empty(size=(tar.size()[0],))
             weight_of_curr_sample[(tar == 0).view((-1,))] = weight[0]
             weight_of_curr_sample[(tar == 1).view((-1,))] = weight[1]
-            loss = F.binary_cross_entropy(pred, tar, weight=weight_of_curr_sample.view((-1, 1)))
+            loss = F.binary_cross_entropy(pred, tar, weight=weight_of_curr_sample.view((-1, 1)).to(use_for_cls_loss.device))
             total_loss += loss
         final_loss = total_loss / use_for_cls_loss.size()[0]
         return final_loss

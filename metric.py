@@ -21,7 +21,7 @@ def RotMatMetric(pred_rot_mats, gt_rot_mat):
         m = t.arccos((t.matmul(t.linalg.inv(pred), gt).trace() - 1) / 2)
         total_ += m
     avg = total_ / R_final.size()[0]
-    return avg
+    return avg, R_final
 
 
 def TransMetric(pred_trans_mats, pred_rot_mats, gt_trans_mat):
@@ -32,16 +32,16 @@ def TransMetric(pred_trans_mats, pred_rot_mats, gt_trans_mat):
     :param gt_trans_mat: ground truth of translation matrix, shape is (N, 3)
     :return:
     """
-    pred_t = t.zeros(gt_trans_mat.size()).type(t.FloatTensor)  # (N, 3)
+    t_final = t.zeros(gt_trans_mat.size()).type(t.FloatTensor)  # (N, 3)
     for i in range(1, len(pred_rot_mats)):
         t_ = pred_trans_mats[i - 1].unsqueeze(1).permute(dims=(0, 2, 1)).cpu().detach()  # (N, 3, 1)
         for pred_rot_mat in pred_rot_mats[i:]:
             pred_rot_mat = pred_rot_mat.cpu().detach()  # (N, 3, 3)
             t_ = t.bmm(pred_rot_mat, t_)  # (N, 3, 1)
-        pred_t += t_.permute(dims=(0, 2, 1)).squeeze(1)
-    pred_t += pred_trans_mats[-1].cpu().detach()
-    m = t.norm(gt_trans_mat - pred_t, dim=1).mean()
-    return m
+        t_final += (t_.permute(dims=(0, 2, 1)).squeeze(1))
+    t_final += pred_trans_mats[-1].cpu().detach()
+    m = t.norm(gt_trans_mat - t_final, dim=1).mean()
+    return m, t_final
 
 
 if __name__ == "__main__":

@@ -11,13 +11,13 @@ os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
 
 print_step = 1
-epoch = 100
+epoch = 1000
 batch_size = 1
 lr = 0.0001
-lr_de_epoch = 20
+lr_de_epoch = 100
 lr_de_rate = 0.1
-threeDRegNet_count = 3
-res_block_counts = [16, 8, 4]
+threeDRegNet_count = 2
+res_block_counts = [8, 4]
 num_of_correspondence = 3000
 loss_alpha = 0.001
 loss_beta = 0.5

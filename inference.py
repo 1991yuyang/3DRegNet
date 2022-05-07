@@ -10,8 +10,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 use_best_model = False
-threeDRegNet_count = 3
-res_block_counts = [16, 8, 4]
+threeDRegNet_count = 2
+res_block_counts = [8, 4]
 num_of_correspondence = 3000
 use_lie = True
 source_pth = r"source.ply"

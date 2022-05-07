@@ -16,18 +16,18 @@ batch_size = 1
 lr = 0.0001
 lr_de_epoch = 200
 lr_de_rate = 0.1
-threeDRegNet_count = 2
-res_block_counts = [8, 4]
-num_of_correspondence = 3000
-loss_alpha = 0.5
-loss_beta = 0.001
+threeDRegNet_count = 3
+res_block_counts = [16, 8, 4]
+num_of_correspondence = 10000
+loss_alpha = 0.1
+loss_beta = 0.5
 use_lie = True
 num_workers = 1
 train_data_dir = r"F:\python_project\test_open3d\pcd_dir"
 valid_data_dir = r"F:\python_project\test_open3d\pcd_dir"
 voxel_size = 0.01
 R_range = [-2, 2]
-t_range = [-2, 2]
+t_range = [-0.2, 0.2]
 noise_strength = 0.12
 feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
 M = 3 if use_lie else 9
@@ -71,12 +71,6 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
             valid_loss = criterion(use_for_cls_losses, class_label_valid_cuda, points_preds, d_valid_cuda[:, :, 3:])
             R_met, R_final = RotMatMetric(rotation_mats, R_valid)
             t_met, t_final = TransMetric(trans_mats, rotation_mats, t_vec_valid)
-            print(R_final)
-            print(R_valid)
-            print("============")
-            print(t_final)
-            print(t_vec_valid)
-            print("=============")
             accum_loss += valid_loss.item()
             accum_R_met += R_met.item()
             accum_t_met += t_met.item()

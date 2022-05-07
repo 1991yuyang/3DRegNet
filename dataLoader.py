@@ -49,6 +49,8 @@ class MySet(data.Dataset):
             source = copy.deepcopy(pcd)
             target, R, t_vec = self.random_transform(pcd)  # R * target + t_vec
             source = self.add_gauss_noise_to_pcd(source)  # add noise to source
+            # o3d.io.write_point_cloud("source.ply", source)
+            # o3d.io.write_point_cloud("target.ply", target)
             target_down, target_down_fpfh = self.preprocess_point_cloud(target)
             source_down, source_down_fpfh = self.preprocess_point_cloud(source)
             fpfh_regis_result = self.execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
@@ -201,10 +203,8 @@ def make_loader(data_dir, voxel_size, R_range, t_range, select_point_count, nois
 if __name__ == "__main__":
     pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
     voxel_size = 0.01
-    R_range = [-3.14, 3.14]
-    t_range = [-1, 1]
-    s = MySet(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12, 45)
-    # for i in range(100):
-    #     s[0]
-    for i in range(10):
-        print(find_feature_dist_thresh(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12))
+    R_range = [-2, 2]
+    t_range = [-0.2, 0.2]
+    s = MySet(pcd_dir, voxel_size, R_range, t_range, 10000, 0.12, 45)
+    for i in range(1):
+        s[0]

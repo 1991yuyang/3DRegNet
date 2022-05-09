@@ -201,7 +201,7 @@ def make_loader(data_dir, voxel_size, R_range, t_range, select_point_count, nois
 
 
 if __name__ == "__main__":
-    pcd_dir = r"F:\data\shapenet_ply"
+    pcd_dir = r"F:\data\shapenet_data\valid"
     voxel_size = 0.01
     R_range = [-0.2, 0.2]
     t_range = [-0.1, 0.1]

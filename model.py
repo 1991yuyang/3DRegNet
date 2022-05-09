@@ -63,6 +63,39 @@ class Res(nn.Module):
         return res_results
 
 
+# class Res(nn.Module):
+#
+#     def __init__(self, resblock_count):
+#         """
+#
+#         :param resblock_count: number of resnet block
+#         """
+#         super(Res, self).__init__()
+#         self.res_blocks = nn.Sequential()
+#         for i in range(resblock_count):
+#             self.res_blocks.add_module("res_block_%d" % (i,), nn.Sequential(
+#                 nn.Linear(in_features=128, out_features=128),
+#                 nn.ReLU(),
+#                 nn.Linear(in_features=128, out_features=128),
+#                 nn.ReLU()
+#             ))
+#
+#     def forward(self, x):
+#         """
+#
+#         :param x: shape like (N, C, F), N represents the number of point correspondence set or Batch Size,
+#                   C represents the number of point correspondence of one point correspondence set, F represents the in_features,
+#                   in_features is 6 if x is original point cloud
+#         :return: shape like (N, C, out_features)
+#         """
+#         res_results = []  # shape of item of the list is [N, C, F]
+#         x = x.unsqueeze(1)  # (N, 1, C, F)
+#         for n, m in self.res_blocks._modules.items():
+#             x = m(x)
+#             res_results.append(x.squeeze(1))
+#         return res_results
+
+
 class CLSNet(nn.Module):
 
     def __init__(self, res_block_count, num_of_correspondence):
@@ -124,6 +157,37 @@ class RegNet(nn.Module):
         linear1_result = self.linear1(conv_result)
         reg_result = self.linear2(linear1_result)
         return reg_result
+
+
+# class RegNet(nn.Module):
+#
+#     def __init__(self, M, res_block_count):
+#         super(RegNet, self).__init__()
+#         self.context_bn = ContextBN()
+#         self.linear1 = nn.Sequential(
+#             nn.Linear(in_features=(res_block_count + 1) * 128, out_features=1024),
+#             nn.ReLU(),
+#             nn.Linear(in_features=1024, out_features=512),
+#             nn.ReLU(),
+#             nn.Linear(in_features=512, out_features=256),
+#             nn.ReLU(),
+#             nn.Linear(in_features=256, out_features=M + 3)
+#         )
+#
+#     def forward(self, cls_features):
+#         pool_results = []
+#         for cls_feature in cls_features:
+#             max_pool_result = t.max(cls_feature, dim=1).values  # shape like: (N, F)
+#             context_bn_result = self.context_bn(max_pool_result)
+#             pool_results.append(context_bn_result)
+#         concate_results = t.cat(pool_results, dim=1)
+#         # concate_results = concate_results.view((concate_results.size()[0], len(pool_results), -1))  # shape like: (N, res_block_count + 1, F)
+#         # concate_results = concate_results.unsqueeze(1)  # (N, 1, res_block_count + 1, F)
+#         # conv_result = self.conv(concate_results).view((concate_results.size()[0], -1))  # (N, 8, res_block_count // 2 + 1, F)
+#         # linear1_result = self.linear1(conv_result)
+#         # reg_result = self.linear2(linear1_result)
+#         reg_result = self.linear1(concate_results)
+#         return reg_result
 
 
 class ThreeDRegNet(nn.Module):

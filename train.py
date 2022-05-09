@@ -2,34 +2,36 @@ import torch as t
 from torch import nn, optim
 import os
 from model import RefineNet
-from loss import RefineLoss
+from loss import RefineLoss, CustomLossOptimRt
 from dataLoader import make_loader, find_feature_dist_thresh
 from metric import RotMatMetric, TransMetric
-CUDA_VISIBLE_DEVICES = "0"
+CUDA_VISIBLE_DEVICES = "0, 1"
 device_ids = list(range(len(CUDA_VISIBLE_DEVICES.split(","))))
 os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
 
 print_step = 1
 epoch = 1000
-batch_size = 1
-lr = 0.0001
+batch_size = 16
+lr = 1e-4
 lr_de_epoch = 100
 lr_de_rate = 0.1
 threeDRegNet_count = 2
-res_block_counts = [8, 4]
+res_block_counts = [16, 8]
 num_of_correspondence = 3000
-loss_alpha = 0.001
-loss_beta = 0.5
+loss_alpha = 0.5
+loss_beta = 1e-3
 use_lie = True
-num_workers = 1
-train_data_dir = r"F:\python_project\test_open3d\pcd_dir"
-valid_data_dir = r"F:\python_project\test_open3d\pcd_dir"
+use_custom_R_t_loss = False
+num_workers = 8
+train_data_dir = r"F:\data\shapenet_ply"
+valid_data_dir = r"F:\data\shapenet_ply"
 voxel_size = 0.01
-R_range = [-2, 2]
-t_range = [-0.02, 0.02]
+R_range = [-0.2, 0.2]
+t_range = [-0.1, 0.1]
 noise_strength = 0.12
-feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+# feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+feature_distance_tresh = 34
 M = 3 if use_lie else 9
 best_valid_loss = float("inf")
 
@@ -42,7 +44,10 @@ def train_epoch(model, criterion, train_loader, optimizer, current_epoch):
         d_train_cuda = d_train.cuda(device_ids[0])
         class_label_train_cuda = class_label_train.cuda(device_ids[0])
         rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d_train_cuda)
-        train_loss = criterion(use_for_cls_losses, class_label_train_cuda, points_preds, d_train_cuda[:, :, 3:])
+        if use_custom_R_t_loss:
+            train_loss = criterion(trans_mats, rotation_mats, t_vec_train, R_train)
+        else:
+            train_loss = criterion(use_for_cls_losses, class_label_train_cuda, points_preds, d_train_cuda[:, :, 3:])
         optimizer.zero_grad()
         train_loss.backward()
         optimizer.step()
@@ -68,7 +73,10 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
         class_label_valid_cuda = class_label_valid.cuda(device_ids[0])
         with t.no_grad():
             rotation_mats, trans_mats, cls_outs, reg_outs, use_for_cls_losses, points_preds = model(d_valid_cuda)
-            valid_loss = criterion(use_for_cls_losses, class_label_valid_cuda, points_preds, d_valid_cuda[:, :, 3:])
+            if use_custom_R_t_loss:
+                valid_loss = criterion(trans_mats, rotation_mats, t_vec_valid, R_valid)
+            else:
+                valid_loss = criterion(use_for_cls_losses, class_label_valid_cuda, points_preds, d_valid_cuda[:, :, 3:])
             R_met, R_final = RotMatMetric(rotation_mats, R_valid)
             t_met, t_final = TransMetric(trans_mats, rotation_mats, t_vec_valid)
             accum_loss += valid_loss.item()
@@ -79,6 +87,10 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
     avg_loss = accum_loss / step
     avg_R_met = accum_R_met / step
     avg_t_met = accum_t_met / step
+    # print(R_final)
+    # print(R_valid)
+    # print(t_final)
+    # print(t_vec_valid)
     print("##########valid epoch:%d############" % (current_epoch,))
     print("valid_loss:%.5f, R_metic:%.5f, t_metric:%.5f" % (avg_loss, avg_R_met, avg_t_met))
     if avg_loss < best_valid_loss:
@@ -91,9 +103,12 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
 def main():
     model = RefineNet(threeDRegNet_count, res_block_counts, num_of_correspondence, M, use_lie)
     model = nn.DataParallel(module=model, device_ids=device_ids)
+    # model.load_state_dict(t.load("epoch.pth"))
     model = model.cuda(device_ids[0])
     optimizer = optim.Adam(params=model.parameters(), lr=lr)
     criterion = RefineLoss(loss_alpha, loss_beta).cuda(device_ids[0])
+    if use_custom_R_t_loss:
+        criterion = CustomLossOptimRt()
     lr_sch = optim.lr_scheduler.StepLR(optimizer, lr_de_epoch, lr_de_rate)
     for e in range(epoch):
         current_epoch = e + 1

@@ -11,7 +11,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 use_best_model = False
 threeDRegNet_count = 2
-res_block_counts = [8, 4]
+res_block_counts = [16, 8]
 num_of_correspondence = 3000
 use_lie = True
 source_pth = r"source.ply"
@@ -79,8 +79,10 @@ def load_source_target():
     target = o3d.io.read_point_cloud(target_pth)
     target_down, target_down_fpfh = preprocess_point_cloud(target)
     source_down, source_down_fpfh = preprocess_point_cloud(source)
-    fpfh_regis_result = execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
-    match_indices = np.asarray(fpfh_regis_result.correspondence_set)
+    match_indices = np.array([])
+    while match_indices.shape[0] == 0:
+        fpfh_regis_result = execute_global_registration(source_down, target_down, source_down_fpfh, target_down_fpfh)
+        match_indices = np.asarray(fpfh_regis_result.correspondence_set)
     target_down_array = np.asarray(target_down.points)
     source_down_array = np.asarray(source_down.points)
     target_down_fpfh_array = np.asarray(target_down_fpfh.data).transpose()
@@ -120,7 +122,6 @@ def predict(model, d):
     points_pred.points = o3d.utility.Vector3dVector(points_pred_np)
     points_target.points = o3d.utility.Vector3dVector(points_target_np)
     show_pcd([points_pred, points_target])
-
 
 
 if __name__ == "__main__":

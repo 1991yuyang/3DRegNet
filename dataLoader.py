@@ -201,10 +201,9 @@ def make_loader(data_dir, voxel_size, R_range, t_range, select_point_count, nois
 
 
 if __name__ == "__main__":
-    pcd_dir = r"F:\python_project\test_open3d\pcd_dir"
+    pcd_dir = r"F:\data\shapenet_ply"
     voxel_size = 0.01
-    R_range = [-2, 2]
-    t_range = [-0.02, 0.02]
+    R_range = [-0.2, 0.2]
+    t_range = [-0.1, 0.1]
     s = MySet(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12, 45)
-    for i in range(1):
-        s[0]
+    s[0]

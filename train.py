@@ -30,8 +30,8 @@ voxel_size = 0.01
 R_range = [-0.2, 0.2]
 t_range = [-0.1, 0.1]
 noise_strength = 0.12
-feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
-# feature_distance_tresh = 34
+# feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+feature_distance_tresh = 34
 M = 3 if use_lie else 9
 best_valid_loss = float("inf")
 
@@ -103,7 +103,7 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
 def main():
     model = RefineNet(threeDRegNet_count, res_block_counts, num_of_correspondence, M, use_lie)
     model = nn.DataParallel(module=model, device_ids=device_ids)
-    model.load_state_dict(t.load("epoch.pth"))
+    # model.load_state_dict(t.load("epoch.pth"))
     model = model.cuda(device_ids[0])
     optimizer = optim.Adam(params=model.parameters(), lr=lr)
     criterion = RefineLoss(loss_alpha, loss_beta).cuda(device_ids[0])

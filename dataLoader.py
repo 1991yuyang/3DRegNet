@@ -62,12 +62,6 @@ class MySet(data.Dataset):
         target_select, source_select, target_fpfh, source_fpfh = self.select_point_feature(target_down_array, source_down_array, target_down_fpfh_array, source_down_fpfh_array, match_indices)
         feature_dist = self.calc_feature_dist(target_fpfh, source_fpfh)
         class_label = feature_dist <= self.feature_distance_thresh
-        # tar = o3d.geometry.PointCloud()
-        # sou = o3d.geometry.PointCloud()
-        # tar.points = o3d.utility.Vector3dVector(target_select)
-        # sou.points = o3d.utility.Vector3dVector(source_select)
-        # source_down.transform(fpfh_regis_result.transformation)
-        # self.show_pcd([sou, tar])
         d = t.tensor(np.concatenate([source_select, target_select], axis=1)).type(t.FloatTensor)
         class_label = t.tensor(class_label).type(t.FloatTensor)
         return d, class_label, feature_dist, R, t_vec.view((3,))
@@ -176,13 +170,15 @@ class MySet(data.Dataset):
        # print(":: RANSAC registration on downsampled point clouds.")
        # print("   Since the downsampling voxel size is %.3f," % self.voxel_size)
        # print("   we use a liberal distance threshold %.3f." % distance_threshold)
+
        result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
            source_down, target_down, source_fpfh, target_fpfh, False, distance_threshold,
            o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
                o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
                    distance_threshold)
-           ], o3d.pipelines.registration.RANSACConvergenceCriteria(4000000, 500))
+           ],
+           o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 200))
        return result
 
 
@@ -206,4 +202,4 @@ if __name__ == "__main__":
     R_range = [-0.2, 0.2]
     t_range = [-0.1, 0.1]
     s = MySet(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12, 45)
-    s[0]
+    s[200]

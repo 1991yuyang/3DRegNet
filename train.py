@@ -5,14 +5,14 @@ from model import RefineNet
 from loss import RefineLoss, CustomLossOptimRt
 from dataLoader import make_loader, find_feature_dist_thresh
 from metric import RotMatMetric, TransMetric
-CUDA_VISIBLE_DEVICES = "0, 1"
+CUDA_VISIBLE_DEVICES = "0"
 device_ids = list(range(len(CUDA_VISIBLE_DEVICES.split(","))))
 os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
 
-print_step = 1
+print_step = 5
 epoch = 1000
-batch_size = 32
+batch_size = 4
 lr = 1e-4
 lr_de_epoch = 100
 lr_de_rate = 0.1
@@ -23,15 +23,15 @@ loss_alpha = 0.5
 loss_beta = 1e-3
 use_lie = True
 use_custom_R_t_loss = False
-num_workers = 0
-train_data_dir = r"/home/guest/yuyang/data/shapenet_data/train"
-valid_data_dir = r"/home/guest/yuyang/data/shapenet_data/valid"
+num_workers = 4
+train_data_dir = r"F:\data\shapenet_data\train"
+valid_data_dir = r"F:\data\shapenet_data\valid"
 voxel_size = 0.01
 R_range = [-0.2, 0.2]
 t_range = [-0.1, 0.1]
 noise_strength = 0.12
-# feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
-feature_distance_tresh = 34
+feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+# feature_distance_tresh = 34
 M = 3 if use_lie else 9
 best_valid_loss = float("inf")
 
@@ -103,7 +103,7 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
 def main():
     model = RefineNet(threeDRegNet_count, res_block_counts, num_of_correspondence, M, use_lie)
     model = nn.DataParallel(module=model, device_ids=device_ids)
-    # model.load_state_dict(t.load("epoch.pth"))
+    model.load_state_dict(t.load("epoch.pth"))
     model = model.cuda(device_ids[0])
     optimizer = optim.Adam(params=model.parameters(), lr=lr)
     criterion = RefineLoss(loss_alpha, loss_beta).cuda(device_ids[0])

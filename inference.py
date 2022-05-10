@@ -9,7 +9,7 @@ from colors import COLOR_MAP
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
-use_best_model = False
+use_best_model = True
 threeDRegNet_count = 2
 res_block_counts = [16, 8]
 num_of_correspondence = 3000

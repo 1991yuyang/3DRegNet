@@ -202,4 +202,4 @@ if __name__ == "__main__":
     R_range = [-0.2, 0.2]
     t_range = [-0.1, 0.1]
     s = MySet(pcd_dir, voxel_size, R_range, t_range, 3000, 0.12, 45)
-    s[200]
+    s[500]

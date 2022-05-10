@@ -5,7 +5,7 @@ from model import RefineNet
 from loss import RefineLoss, CustomLossOptimRt
 from dataLoader import make_loader, find_feature_dist_thresh
 from metric import RotMatMetric, TransMetric
-CUDA_VISIBLE_DEVICES = "1"
+CUDA_VISIBLE_DEVICES = "0"
 device_ids = list(range(len(CUDA_VISIBLE_DEVICES.split(","))))
 os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
@@ -23,15 +23,16 @@ loss_alpha = 0.5
 loss_beta = 1e-3
 use_lie = True
 use_custom_R_t_loss = False
+saving_according_to_R_t_met = True
 num_workers = 0
-train_data_dir = r"/home/guest/yuyang/data/shapenet_data/train"
-valid_data_dir = r"/home/guest/yuyang/data/shapenet_data/valid"
+train_data_dir = r"F:\data\shapenet_data\train"
+valid_data_dir = r"F:\data\shapenet_data\valid"
 voxel_size = 0.01
 R_range = [-0.2, 0.2]
 t_range = [-0.1, 0.1]
 noise_strength = 0.12
-feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
-# feature_distance_tresh = 34
+# feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+feature_distance_tresh = 34
 M = 3 if use_lie else 9
 best_valid_loss = float("inf")
 
@@ -93,6 +94,8 @@ def valid_epoch(model, criterion, valid_loader, current_epoch):
     # print(t_vec_valid)
     print("##########valid epoch:%d############" % (current_epoch,))
     print("valid_loss:%.5f, R_metic:%.5f, t_metric:%.5f" % (avg_loss, avg_R_met, avg_t_met))
+    if saving_according_to_R_t_met:
+        avg_loss = avg_R_met + avg_t_met
     if avg_loss < best_valid_loss:
         best_valid_loss = avg_loss
         print("saving best model......")

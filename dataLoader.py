@@ -172,13 +172,13 @@ class MySet(data.Dataset):
        # print("   we use a liberal distance threshold %.3f." % distance_threshold)
 
        result = o3d.pipelines.registration.registration_ransac_based_on_feature_matching(
-           source_down, target_down, source_fpfh, target_fpfh, False, distance_threshold,
-           o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 4, [
+           source_down, target_down, source_fpfh, target_fpfh, True, distance_threshold,
+           o3d.pipelines.registration.TransformationEstimationPointToPoint(False), 3, [
                o3d.pipelines.registration.CorrespondenceCheckerBasedOnEdgeLength(0.9),
                o3d.pipelines.registration.CorrespondenceCheckerBasedOnDistance(
                    distance_threshold)
            ],
-           o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 200))
+           o3d.pipelines.registration.RANSACConvergenceCriteria(100000, 0.999))
        return result
 
 

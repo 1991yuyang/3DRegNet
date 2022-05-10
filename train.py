@@ -5,14 +5,14 @@ from model import RefineNet
 from loss import RefineLoss, CustomLossOptimRt
 from dataLoader import make_loader, find_feature_dist_thresh
 from metric import RotMatMetric, TransMetric
-CUDA_VISIBLE_DEVICES = "0"
+CUDA_VISIBLE_DEVICES = "0, 1"
 device_ids = list(range(len(CUDA_VISIBLE_DEVICES.split(","))))
 os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
 
 print_step = 5
 epoch = 1000
-batch_size = 4
+batch_size = 32
 lr = 1e-4
 lr_de_epoch = 100
 lr_de_rate = 0.1
@@ -23,9 +23,9 @@ loss_alpha = 0.5
 loss_beta = 1e-3
 use_lie = True
 use_custom_R_t_loss = False
-num_workers = 4
-train_data_dir = r"F:\data\shapenet_data\train"
-valid_data_dir = r"F:\data\shapenet_data\valid"
+num_workers = 0
+train_data_dir = r"/home/guest/yuyang/data/shapenet_data/train"
+valid_data_dir = r"/home/guest/yuyang/data/shapenet_data/valid"
 voxel_size = 0.01
 R_range = [-0.2, 0.2]
 t_range = [-0.1, 0.1]

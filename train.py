@@ -5,14 +5,14 @@ from model import RefineNet
 from loss import RefineLoss, CustomLossOptimRt
 from dataLoader import make_loader, find_feature_dist_thresh
 from metric import RotMatMetric, TransMetric
-CUDA_VISIBLE_DEVICES = "0, 1"
+CUDA_VISIBLE_DEVICES = "1"
 device_ids = list(range(len(CUDA_VISIBLE_DEVICES.split(","))))
 os.environ["CUDA_VISIBLE_DEVICES"] = CUDA_VISIBLE_DEVICES
 
 
 print_step = 5
 epoch = 1000
-batch_size = 32
+batch_size = 4
 lr = 1e-4
 lr_de_epoch = 100
 lr_de_rate = 0.1
@@ -30,8 +30,8 @@ voxel_size = 0.01
 R_range = [-0.2, 0.2]
 t_range = [-0.1, 0.1]
 noise_strength = 0.12
-# feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
-feature_distance_tresh = 34
+feature_distance_tresh = find_feature_dist_thresh(train_data_dir, voxel_size, R_range, t_range, num_of_correspondence, noise_strength)
+# feature_distance_tresh = 34
 M = 3 if use_lie else 9
 best_valid_loss = float("inf")
 
